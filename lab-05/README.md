@@ -24,10 +24,9 @@ Em seguida, o desenho do experimento será descrito em tópicos
 **Variáveis dependentes (VD)**
 
 1. Latência total (ms) - tempo entre envio da requisição e recebimento do último byte da resposta (medido no cliente).
-2. Time To First Byte - TTFB (ms), tempo até o primeiro byte (quando extraível).
-3. Tamanho da resposta (bytes, sem compressão) - tamanho do corpo JSON recebido.
-4. Taxa de sucesso (%) - proporção de requisições com status 2xx por tratamento.
-5. Número de chamadas REST necessárias - soma das chamadas REST necessárias para obter o mesmo conjunto lógico de dados.
+2. Tamanho da resposta (bytes, sem compressão) - tamanho do corpo JSON recebido.
+3. Taxa de sucesso (%) - proporção de requisições com status 2xx por tratamento.
+4. Número de chamadas REST necessárias - soma das chamadas REST necessárias para obter o mesmo conjunto lógico de dados.
 
 **Variáveis independentes (VI)**
 
