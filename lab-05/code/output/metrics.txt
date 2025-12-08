@@ -1,0 +1,17 @@
+========== Dados Carregados ==========
+========== Estatísticas por API ==========
+
+--- API: graphql ---
+Latência (ms): {'media': np.float64(832.1664005915324), 'mediana': np.float64(709.4448804855347), 'desvio_padrao': np.float64(336.6403608753921), 'variancia': np.float64(113326.73257031424), 'min': np.float64(584.141731262207), 'max': np.float64(2466.758251190185), 'n': np.int64(750)}
+Bytes: {'media': np.float64(1564.2), 'mediana': np.float64(179.0), 'desvio_padrao': np.float64(2926.737024882333), 'variancia': np.float64(8565789.61281709), 'min': np.int64(47), 'max': np.int64(8920), 'n': np.int64(750)}
+
+--- API: rest ---
+Latência (ms): {'media': np.float64(954.0988429387411), 'mediana': np.float64(740.6885623931885), 'desvio_padrao': np.float64(419.6710995771646), 'variancia': np.float64(176123.83182030643), 'min': np.float64(550.7946014404297), 'max': np.float64(3031.92400932312), 'n': np.int64(750)}
+Bytes: {'media': np.float64(71966.93333333333), 'mediana': np.float64(5870.0), 'desvio_padrao': np.float64(102508.47600857382), 'variancia': np.float64(10507987653.600355), 'min': np.int64(1188), 'max': np.int64(286239), 'n': np.int64(750)}
+========== Testes de Hipóteses ==========
+IH1 — Latência: GraphQL < REST ?
+ t=-6.2067, p(one-tailed)=0.0000
+IH2 — Tamanho da Resposta: GraphQL < REST ?
+ t=-18.8011, p(one-tailed)=0.0000
+Gerando gráficos em ./output ...
+Análise concluída! Resultados e gráficos disponíveis em output/.
