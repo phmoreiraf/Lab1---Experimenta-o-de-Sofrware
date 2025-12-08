@@ -1,25 +1,47 @@
 # Comparação entre API GraphQL vs API REST do GitHub
 
-Este experimento busca-se compreender melhor o impacto do uso de APIs GraphQL, comparando esse modelo de API com o modelo mais comum REST. Para tal, foi escolhido a API do GitHub por sua popularidade, robusteza e por haver os dois tipos de API presentes na plataforma. Com isso em mente, foram propostas duas perguntas de pesquisa (research questions, RQs):
+## Informações do Grupo
 
-- RQ1. Respostas às consultas GraphQL são mais rápidas que respostas às consultas REST? 
-- RQ2. Respostas às consultas GraphQL tem tamanho menor que respostas às consultas REST?
+- 🎓 Curso: Engenharia de Software
+- 📘 Disciplina: Laboratório de Experimentação de Software
+- 🗓 Período: 6° Período
+- 👨‍🏫 Professor(a): Prof. Dr. João Paulo Carneiro Aramuni
+- 👥 Membros do Grupo: Jhonata Dias, Lucca Faria e Pedro Henrique Ferreira
 
-Em seguida, o desenho do experimento será descrito em tópicos
+## Introdução 
 
-## Hipóteses
+Este experimento busca-se compreender melhor o impacto do uso de APIs GraphQL, comparando esse modelo de API com o modelo mais comum REST. Para tal, foi escolhido a API do GitHub por sua popularidade, robusteza e por haver os dois tipos de API presentes na plataforma. 
 
-**RQ1 - Latência**
+### Questões de Pesquisa (Research Questions – RQs)
 
-- H0 (nula): A latência média das consultas GraphQL é maior ou igual à latência média das consultas REST. (LatênciaMédiaGraphQL ​≥ LatênciaMédiaREST​)
-- H1 (alternativa): A latência média das consultas GraphQL é menor que a latência média das consultas REST. (LatênciaMédiaGraphQL ​< LatênciaMédiaREST​)
+Em busca de entender a diferença entre APIs Rest e GraphQL, foram elaboradas as seguintes RQs:
 
-**RQ2 - Tamanho**
+| RQ   | Pergunta |
+|------|----------|
+| RQ01 | Respostas às consultas GraphQL são mais rápidas que respostas às consultas REST? |
+| RQ02 | Respostas às consultas GraphQL tem tamanho menor que respostas às consultas REST? |
 
-- H0 (nula): O tamanho médio das respostas (especificar se comprimido/descomprimido) de GraphQL é maior ou igual ao tamanho médio das respostas REST. (TamanhoMédioGraphQL ​≥ TamanhoMédioREST​)
-- H1 (alternativa): O tamanho médio das respostas de GraphQL é menor que o tamanho médio das respostas REST. (TamanhoMédioGraphQL ​< TamanhoMédioREST​)
+### Hipóteses Informais (Informal Hypotheses – IH)
 
-## Variáveis
+Após as RQs, foram feitas hipóteses informais para sustentar a análise tanto da latência quanto do tamanho das APIs a serem testadas:
+
+| IH   | RQ Relacionada | Descrição |
+|------|------|-----------|
+|IH1<sub>0</sub>| RQ1 | A latência média das consultas GraphQL é maior ou igual à latência média das consultas REST. (LatênciaMédiaGraphQL ​≥ LatênciaMédiaREST​) |
+|IH1<sub>1</sub>| RQ1 | A latência média das consultas GraphQL é menor que a latência média das consultas REST. (LatênciaMédiaGraphQL ​< LatênciaMédiaREST​) |
+|IH2<sub>0</sub>| RQ2 | O tamanho médio das respostas de GraphQL é maior ou igual ao tamanho médio das respostas REST. (TamanhoMédioGraphQL ​≥ TamanhoMédioREST​) |
+|IH2<sub>1</sub>| RQ2 | O tamanho médio das respostas de GraphQL é menor que o tamanho médio das respostas REST. (TamanhoMédioGraphQL ​< TamanhoMédioREST​) |
+
+## Tecnologias e ferramentas utilizadas
+
+- **💻 Linguagem de Programação:** Python
+- **🛠 Frameworks/Bibliotecas:** Pandas, Matplotlib, Seaborn
+- **🌐 APIs utilizadas:** GitHub GraphQL API, GitHub REST API
+- **📦 Dependências:** Requests, Numpy
+
+## Metodologia
+
+### Variáveis
 
 **Variáveis dependentes (VD)**
 
@@ -35,7 +57,7 @@ Em seguida, o desenho do experimento será descrito em tópicos
 3. Autenticação: uso de token (constante para todas as requisições).
 4. Ordem de execução: aleatorizada entre repetições para prevenir efeitos de ordem.
 
-## Tratamentos (combinações de fatores)
+### Tratamentos (combinações de fatores)
 
 Cada tratamento é a combinação dos níveis dos fatores: API × Complexidade.
 
@@ -53,7 +75,7 @@ Total de tratamentos: 2 × 3 = 6.
 
 A unidade de comparação é a tarefa lógica (mesmo conteúdo desejado). Para REST, quando necessário, somar as latências de todas as chamadas REST da tarefa lógica antes de comparar com a chamada GraphQL.
 
-## Objetos experimentais
+### Objetos experimentais
 
 Serão utilizados múltiplos objetos por categoria para permitir generalização.
 
@@ -61,13 +83,12 @@ Serão utilizados múltiplos objetos por categoria para permitir generalização
 
 1. Usuário (simples): 5 usuários distintos (mistura de perfis populares e pouco ativos). Campos: login, id, name, followers_count.
 2. Repositório (média): 5 repositórios (3 populares, 2 pequenos). Campos: name, owner, description, stargazers_count, forks_count, license.
-3. Issues / Commits (complexa): 5 repositórios (podendo haver sobreposição com a categoria repositório) para extração de listas:
+3. Issues (complexa): 5 repositórios (podendo haver sobreposição com a categoria repositório) para extração de listas:
     - Issues: últimos 50 issues (título, número, author login, labels).
-    - Commits: últimos 10 commits (sha, message, author login, date).
 
 Para cada objeto será definida uma query GraphQL e o conjunto de chamadas REST que devolve dados logicamente equivalentes. O mapeamento campo a campo será documentado.
 
-## Tipo de projeto experimental
+### Tipo de projeto experimental
 
 Within-subjects (pareado): cada tarefa lógica será executada em ambos os níveis do fator API (GraphQL e REST), gerando pares de observações. A ordem das execuções em cada par será aleatorizada. Uma seed fixa será usada para reprodutibilidade.
 
@@ -85,7 +106,7 @@ Within-subjects (pareado): cada tarefa lógica será executada em ambos os níve
 - **Cabeçalhos de compressão:** nenhum cabeçalho Accept-Encoding será enviado — assim, todas as respostas chegam sem compressão do lado do servidor.
 - **Justificativa:** 50 repetições por condição fornecem robustez estatística frente à variabilidade de rede e permitem aplicar testes pareados.
 
-## Ameaças à validade e medidas mitigadoras
+### Ameaças à validade e medidas mitigadoras
 
 1. Construto
 

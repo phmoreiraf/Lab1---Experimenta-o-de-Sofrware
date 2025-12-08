@@ -9,236 +9,260 @@ import random
 import argparse
 import requests
 from dotenv import load_dotenv
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
-# ==========================================================
-# 1. Carregar TOKEN do .env
-# ==========================================================
+# ======================================================================
+# LOAD TOKEN
+# ======================================================================
 load_dotenv()
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+TOKEN = os.getenv("GITHUB_TOKEN")
+if not TOKEN:
+    raise RuntimeError("Missing GITHUB_TOKEN in .env")
 
-if not GITHUB_TOKEN:
-    raise RuntimeError("ERRO: GITHUB_TOKEN não encontrado no arquivo .env")
-
-OUTPUT_DIR = "output"
-if not os.path.exists(OUTPUT_DIR):
-    os.makedirs(OUTPUT_DIR)
-
-# ==========================================================
-# 2. Objetos experimentais (definidos conforme o desenho)
-# ==========================================================
-DEFAULT_USERS = ["torvalds", "octocat", "defunkt", "mojombo", "pjhyett"]
-DEFAULT_REPOS = ["torvalds/linux", "octocat/Hello-World", "psf/requests", "django/django", "numpy/numpy"]
-
-# ==========================================================
-# 3. Consultas GraphQL
-# ==========================================================
-GRAPHQL_QUERIES = {
-    "user_basic": """
-        query($login: String!) {
-            user(login: $login) {
-                name
-                login
-                id
-            }
-        }
-    """,
-    "repo_basic": """
-        query($owner: String!, $name: String!) {
-            repository(owner: $owner, name: $name) {
-                name
-                id
-                stargazerCount
-                forkCount
-            }
-        }
-    """,
-    "repo_issues": """
-        query($owner: String!, $name: String!) {
-            repository(owner: $owner, name: $name) {
-                issues(first: 10) {
-                    nodes { id title state }
-                }
-            }
-        }
-    """,
-    "repo_commits": """
-        query($owner: String!, $name: String!) {
-            repository(owner: $owner, name: $name) {
-                defaultBranchRef {
-                    target {
-                        ... on Commit {
-                            history(first: 10) {
-                                edges { node { oid messageHeadline author { name } } }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    """,
+HEADERS_REST = {
+    "Authorization": f"Bearer {TOKEN}",
+    "Accept": "application/json",
+    "Accept-Encoding": ""  # disable compression
 }
 
-# ==========================================================
-# 4. Endpoints REST equivalentes
-# ==========================================================
-REST_ENDPOINTS = {
-    "user_basic": lambda login: f"https://api.github.com/users/{login}",
-    "repo_basic": lambda full: f"https://api.github.com/repos/{full}",
-    "repo_issues": lambda full: f"https://api.github.com/repos/{full}/issues?per_page=10&state=all",
-    "repo_commits": lambda full: f"https://api.github.com/repos/{full}/commits?per_page=10",
+HEADERS_GRAPHQL = {
+    "Authorization": f"Bearer {TOKEN}",
+    "Content-Type": "application/json",
+    "Accept-Encoding": ""  # disable compression
 }
 
-# ==========================================================
-# 5. Função de medição
-# ==========================================================
-def measure_request(method: str, url: str = None, json_body: Dict = None,
-                    headers: Dict = None, timeout: float = 20.0) -> Dict[str, Any]:
+# ======================================================================
+# EXPERIMENT OBJECTS
+# ======================================================================
+USERS = ["torvalds", "octocat", "defunkt", "mojombo", "pjhyett"]
+REPOS = ["torvalds/linux", "octocat/Hello-World", "psf/requests", "django/django", "numpy/numpy"]
 
+# ======================================================================
+# GRAPHQL QUERIES (DESENHO DO EXPERIMENTO)
+# ======================================================================
+GQL_USER = """
+query($login:String!) {
+  user(login:$login) {
+    login
+    id
+    name
+    followers { totalCount }
+  }
+}
+"""
+
+GQL_REPO = """
+query($owner:String!, $name:String!) {
+  repository(owner:$owner, name:$name) {
+    name
+    description
+    owner { login }
+    stargazerCount
+    forkCount
+    licenseInfo { name }
+  }
+}
+"""
+
+GQL_ISSUES = """
+query($owner:String!, $name:String!) {
+  repository(owner:$owner, name:$name) {
+    issues(first:50, orderBy:{field:CREATED_AT,direction:DESC}) {
+      nodes {
+        number
+        title
+        author { login }
+        labels(first:10) { nodes { name } }
+      }
+    }
+  }
+}
+"""
+
+GRAPHQL_TASKS = {
+    "simple_user": GQL_USER,
+    "medium_repo": GQL_REPO,
+    "complex_issues": GQL_ISSUES,
+}
+
+# ======================================================================
+# REST ENDPOINTS (CAMPOS MAPEADOS EQUIVALENTEMENTE)
+# ======================================================================
+
+def rest_user(login: str) -> List[str]:
+    """1 chamada REST."""
+    return [f"https://api.github.com/users/{login}"]
+
+def rest_repo(full: str) -> List[str]:
+    """1 chamada REST."""
+    return [f"https://api.github.com/repos/{full}"]
+
+def rest_issues(full: str) -> List[str]:
+    """
+    Para 50 issues:
+      - GitHub REST retorna no máximo 100 por página → OK em 1 chamada
+    """
+    return [f"https://api.github.com/repos/{full}/issues?per_page=50&state=all&sort=created&direction=desc"]
+
+REST_TASKS = {
+    "simple_user": rest_user,
+    "medium_repo": rest_repo,
+    "complex_issues": rest_issues,
+}
+
+# ======================================================================
+# GENERIC REQUEST MEASUREMENT
+# ======================================================================
+def measure(method: str, url: str, json_body=None) -> Dict[str, Any]:
     t0 = time.time()
 
     try:
         if method == "GET":
-            resp = requests.get(url, headers=headers, timeout=timeout)
+            resp = requests.get(url, headers=HEADERS_REST, timeout=20)
         else:
-            resp = requests.post(url, json=json_body, headers=headers, timeout=timeout)
+            resp = requests.post(url, headers=HEADERS_GRAPHQL, json=json_body, timeout=20)
 
-        t1 = time.time()
-
-        return {
-            "status": resp.status_code,
-            "time_ms": (t1 - t0) * 1000,
-            "bytes": len(resp.content),
-            "rate_remaining": resp.headers.get("X-RateLimit-Remaining"),
-            "rate_reset": resp.headers.get("X-RateLimit-Reset"),
-            "error": None,
-        }
+        dt = (time.time() - t0) * 1000
+        return dict(
+            status=resp.status_code,
+            time_ms=dt,
+            bytes=len(resp.content),
+            error=None,
+            rate_remaining = resp.headers.get("X-RateLimit-Remaining"),
+            rate_reset = resp.headers.get("X-RateLimit-Reset"),
+        )
 
     except Exception as e:
-        return {
-            "status": None,
-            "time_ms": None,
-            "bytes": None,
-            "rate_remaining": None,
-            "rate_reset": None,
-            "error": str(e),
-        }
+        return dict(
+            status=None,
+            time_ms=None,
+            bytes=None,
+            error=str(e),
+            rate_remaining = None,
+            rate_reset = None,
+        )
 
-# ==========================================================
-# 6. Execução de uma tarefa (REST ou GraphQL)
-# ==========================================================
-def execute_task(task, headers_graphql, headers_rest):
-    name, typ, params = task
+# ======================================================================
+# TASK EXECUTION
+# ======================================================================
+def run_graphql(task_name: str, params: Dict[str, Any]):
+    query = GRAPHQL_TASKS[task_name]
+    return dict(
+        task=task_name,
+        api="graphql",
+        **params,
+        **measure(
+            "POST",
+            "https://api.github.com/graphql",
+            json_body={"query": query, "variables": params}
+        ),
+        rest_calls=0
+    )
 
-    if typ == "graphql":
-        query = GRAPHQL_QUERIES[name]
-        return {
-            "task": name,
-            "type": "graphql",
-            **params,
-            **measure_request(
-                "POST",
-                url="https://api.github.com/graphql",
-                json_body={"query": query, "variables": params},
-                headers=headers_graphql
-            )
-        }
-
+def run_rest(task_name: str, params: Dict[str, Any]):
+    # Normalização: REST recebe apenas os parâmetros que realmente usa
+    if task_name in ("medium_repo", "complex_issues"):
+        clean_params = {"full": params["full"]}
+    elif task_name == "simple_user":
+        clean_params = {"login": params["login"]}
     else:
-        url = REST_ENDPOINTS[name](params.get("login") or params.get("full"))
-        return {
-            "task": name,
-            "type": "rest",
-            **params,
-            **measure_request(
-                "GET",
-                url=url,
-                headers=headers_rest
-            )
-        }
+        raise RuntimeError(f"Unknown task_name: {task_name}")
 
-# ==========================================================
-# 7. Execução completa do experimento
-# ==========================================================
+    urls = REST_TASKS[task_name](**clean_params)
+
+    total_time = 0
+    total_bytes = 0
+    final_status = 200
+    error = None
+
+    for url in urls:
+        r = measure("GET", url)
+        if r["status"] is None or not (200 <= r["status"] < 300):
+            final_status = r["status"]
+            error = r["error"]
+        total_time += (r["time_ms"] or 0)
+        total_bytes += (r["bytes"] or 0)
+
+    return dict(
+        task=task_name,
+        api="rest",
+        **params,           # ← mantém os parâmetros originais para registro
+        status=final_status,
+        time_ms=total_time,
+        bytes=total_bytes,
+        error=error,
+        rest_calls=len(urls),
+    )
+
+# ======================================================================
+# EXPERIMENT EXECUTION
+# ======================================================================
+def build_task_list():
+    tasks = []
+    for u in USERS:
+        tasks.append(("simple_user", {"login": u}))
+
+    for r in REPOS:
+        owner, name = r.split("/")
+        tasks.append(("medium_repo", {"owner": owner, "name": name, "full": r}))
+        tasks.append(("complex_issues", {"owner": owner, "name": name, "full": r}))
+
+    return tasks
+
+
 def run_experiment(reps: int, warmup: int, seed: int,
                    out_jsonl: str, out_csv: str,
                    interval_min: int, interval_max: int):
 
     random.seed(seed)
 
-    out_jsonl = os.path.join(OUTPUT_DIR, out_jsonl)
-    out_csv = os.path.join(OUTPUT_DIR, out_csv)
+    all_tasks = build_task_list()
 
-    headers_graphql = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Content-Type": "application/json",
-        "Accept-Encoding": ""   # sem compressão
-    }
+    # Expand REST + GraphQL
+    expanded = []
+    for tname, params in all_tasks:
+        base = dict(params)
+        if "full" in base:
+            base_rest = dict(full=base["full"])
+        expanded.append(("graphql", tname, params))
+        expanded.append(("rest", tname, params))
 
-    headers_rest = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json",
-        "Accept-Encoding": ""   # sem compressão
-    }
+    random.shuffle(expanded)
 
-    # Monta lista de tarefas
-    tasks = []
-
-    for login in DEFAULT_USERS:
-        tasks.append(("user_basic", "graphql", {"login": login}))
-        tasks.append(("user_basic", "rest", {"login": login}))
-
-    for repo in DEFAULT_REPOS:
-        owner, name = repo.split("/")
-        tasks.append(("repo_basic", "graphql", {"owner": owner, "name": name}))
-        tasks.append(("repo_basic", "rest", {"full": repo}))
-
-        tasks.append(("repo_issues", "graphql", {"owner": owner, "name": name}))
-        tasks.append(("repo_issues", "rest", {"full": repo}))
-
-        tasks.append(("repo_commits", "graphql", {"owner": owner, "name": name}))
-        tasks.append(("repo_commits", "rest", {"full": repo}))
-
-    random.shuffle(tasks)
-
-    # WARM-UP
+    # Warm-up
     for _ in range(warmup):
-        task = random.choice(tasks)
-        execute_task(task, headers_graphql, headers_rest)
+        api, name, params = random.choice(expanded)
+        if api == "graphql":
+            run_graphql(name, params)
+        else:
+            run_rest(name, params)
 
-    # Execução principal
     rows = []
-
-    print("Iniciando experimento as: " + time.strftime("%Y-%m-%d %H:%M:%S"))
+    print("Experiment start:", time.strftime("%Y-%m-%d %H:%M:%S"))
 
     for _ in range(reps):
-        for task in tasks:
+        for api, name, params in expanded:
             time.sleep(random.uniform(interval_min/1000, interval_max/1000))
-            result = execute_task(task, headers_graphql, headers_rest)
-            rows.append(result)
+            if api == "graphql":
+                rows.append(run_graphql(name, params))
+            else:
+                rows.append(run_rest(name, params))
 
-    # Salvar JSONL
-    with open(out_jsonl, "w", encoding="utf-8") as jf:
+    # WRITE JSONL
+    os.makedirs("output", exist_ok=True)
+    with open(f"output/{out_jsonl}", "w") as f:
         for r in rows:
-            jf.write(json.dumps(r) + "\n")
+            f.write(json.dumps(r) + "\n")
 
-    # Salvar CSV
-    with open(out_csv, "w", encoding="utf-8", newline="") as cf:
-        all_fields = set()
-        for r in rows:
-            all_fields.update(r.keys())
-        all_fields = list(all_fields)
-
-        writer = csv.DictWriter(cf, fieldnames=all_fields)
+    # WRITE CSV
+    fields = sorted({k for r in rows for k in r.keys()})
+    with open(f"output/{out_csv}", "w", newline="", encoding="utf8") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
-
-        # Preencher valores ausentes com vazio
         for r in rows:
-            writer.writerow({field: r.get(field, "") for field in all_fields})
+            writer.writerow(r)
 
-    print("Experimento concluído as: " + time.strftime("%Y-%m-%d %H:%M:%S"))
-    print(f"JSONL salvo em {out_jsonl}")
-    print(f"CSV salvo em {out_csv}")
+    print("Experiment end:", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 # ==========================================================
 # 8. CLI
