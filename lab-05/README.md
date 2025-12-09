@@ -92,7 +92,7 @@ Para cada objeto será definida uma query GraphQL e o conjunto de chamadas REST 
 
 Within-subjects (pareado): cada tarefa lógica será executada em ambos os níveis do fator API (GraphQL e REST), gerando pares de observações. A ordem das execuções em cada par será aleatorizada. Uma seed fixa será usada para reprodutibilidade.
 
-## Quantidade de medições e parâmetros operacionais
+### Quantidade de medições e parâmetros operacionais
 
 **Parâmetros escolhidos:**
 
@@ -133,7 +133,7 @@ Within-subjects (pareado): cada tarefa lógica será executada em ambos os níve
 - **Ameaças:** instrumentação incorreta (medição de tempo/tamanho).
 - **Mitigações:** validar o script de medição contra servidor de teste local; medir timestamps com relógio monotônico; confirmar contagem de bytes lidos do corpo quando Content-Length ausente.
 
-## Coleta de Dados
+### Coleta de Dados
 
 A coleta de dados foi realizada utilizando as APIs REST e GraphQL do GitHub, com o objetivo de comparar desempenho e eficiência entre ambos os paradigmas de acesso a dados.
 Para evitar vieses e garantir variabilidade, foram projetados três tipos de tarefas, representando diferentes níveis de complexidade:
@@ -159,7 +159,7 @@ As seguintes métricas foram coletadas:
 
 As requisições foram ordenadas em sequência aleatória para mitigar vieses de rede e cache.
 
-## Normalização e pré-processamento
+### Normalização e pré-processamento
 
 Após coletados, os dados foram organizados em um arquivo CSV único contendo:
 
@@ -180,7 +180,7 @@ As etapas de pré-processamento incluíram:
 
 Esses dados normalizados foram então usados para análise estatística e geração dos gráficos.
 
-## Métricas
+### Métricas
 
 A seguir, as métricas utilizadas no laboratório, divididas em métricas principais do experimento e métricas complementares.
 
@@ -193,4 +193,86 @@ Métricas do Experimento (Core Metrics — CM)
 | **CM04** | **Número de chamadas REST necessárias** | Total de requisições REST para retornar os mesmos dados que uma única query GraphQL. |
 | **CM05** | **Categoria da consulta**               | Classificação como simples, média ou complexa.                                       |
 
+### Relação das RQs com as Métricas
 
+As questões de pesquisa foram mapeadas diretamente às métricas do experimento:
+
+| RQ   | Pergunta                                                | Métrica                        | Código           |
+| ---- | ------------------------------------------------------- | ------------------------------ | ---------------- |
+| RQ01 | Qual API apresenta menor latência média?                | Latência total                 | CM01             |
+| RQ02 | Qual API retorna respostas menores?                     | Tamanho da resposta            | CM02             |
+| RQ03 | A diferença é consistente entre níveis de complexidade? | Latência e bytes por categoria | CM01, CM02, CM05 |
+| RQ04 | GraphQL reduz o número de chamadas necessárias?         | Nº de chamadas REST            | CM04             |
+| RQ05 | Há variação significativa dentro de cada categoria?     | Desvio padrão e IC95           | AM04             |
+
+## Resultados
+
+Os gráficos apresentados (bar plots, violin plots, histograma etc.) ilustram claramente as diferenças entre REST e GraphQL.
+
+### Distribuição por categoria
+
+As consultas foram realizadas de forma balanceada:
+
+| Categoria | Quantidade total |
+| --------- | ---------------- |
+| Simples   | 500              |
+| Média     | 500              |
+| Complexa  | 500              |
+
+### Estatísticas Descritivas
+
+**Latência**
+
+| API     | Média | Mediana | Desv. Pad. | Min | Max  |
+| ------- | ----- | ------- | ---------- | --- | ---- |
+| GraphQL | 832   | 709     | 336        | 584 | 2467 |
+| REST    | 954   | 741     | 419        | 551 | 3032 |
+
+**Tamanho (Em Bytes)**
+
+| API     | Média | Mediana | Desv. Pad. | Min  | Max    |
+| ------- | ----- | ------- | ---------- | ---- | ------ |
+| GraphQL | 1564  | 179     | 2926       | 47   | 8920   |
+| REST    | 71967 | 5870    | 102508     | 1188 | 286239 |
+
+### Discussão dos resultados
+
+Com base nos resultados obtidos, podemos responder às hipóteses informais:
+
+IH1 - Latência
+
+- GraphQL é mais rápido? Confirmada.
+
+    - O teste t mostrou p < 0.0001, indicando que:
+    - GraphQL possui latência significativamente menor.
+    - A diferença é especialmente forte em consultas complexas (gráficos mostraram 90 ms a 500 ms de diferença).
+
+IH2 - Tamanho da Resposta
+
+- GraphQL retorna menos dados? Confirmada.
+
+    - REST retorna 46× mais bytes do que GraphQL, em média.
+    - A vantagem é mais visível nas consultas complexas.
+
+## Conclusão
+
+O experimento demonstra de forma clara e estatisticamente sólida que:
+
+**Principais achados**
+
+- GraphQL apresenta latência menor que REST.
+- GraphQL retorna respostas muito menores em bytes.
+- A diferença aumenta conforme a complexidade da consulta cresce.
+- REST exige mais chamadas e possui maior overhead.
+
+**Dificuldades encontradas**
+
+- Variabilidade de rede entre repetições.
+- Construção de queries equivalentes entre APIs.
+
+**Trabalhos futuros**
+
+- Avaliar impacto de autenticação, caching e fragmentos GraphQL.
+- Estudar consumo energético ou custo monetário das requisições.
+- Testar outros cenários (buscas, commits, branches, releases).
+- Analisar consumo no servidor (não apenas no cliente).
