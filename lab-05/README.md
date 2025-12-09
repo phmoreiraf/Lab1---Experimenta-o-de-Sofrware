@@ -132,3 +132,65 @@ Within-subjects (pareado): cada tarefa lógica será executada em ambos os níve
 
 - **Ameaças:** instrumentação incorreta (medição de tempo/tamanho).
 - **Mitigações:** validar o script de medição contra servidor de teste local; medir timestamps com relógio monotônico; confirmar contagem de bytes lidos do corpo quando Content-Length ausente.
+
+## Coleta de Dados
+
+A coleta de dados foi realizada utilizando as APIs REST e GraphQL do GitHub, com o objetivo de comparar desempenho e eficiência entre ambos os paradigmas de acesso a dados.
+Para evitar vieses e garantir variabilidade, foram projetados três tipos de tarefas, representando diferentes níveis de complexidade:
+
+- Simples - consulta básica a um usuário: login, id, nome e número de seguidores.
+- Média - consulta a metadados de repositório: nome, dono, descrição, estrelas, forks e licença.
+- Complexa - consulta aos últimos 50 issues de um repositório: título, número, autor e labels.
+
+Foram selecionados 5 usuários e 5 repositórios (incluindo repositórios populares e pouco ativos). Para cada entidade, foi construída uma consulta equivalente em REST e em GraphQL.
+
+Cada operação foi repetida 50 vezes, totalizando:
+
+- 750 requisições REST
+- 750 requisições GraphQL
+- 1500 medições usadas na análise estatística.
+
+As seguintes métricas foram coletadas:
+
+- Latência total (ms): tempo entre envio e recebimento do último byte.
+- Tamanho da resposta (bytes): conteúdo JSON antes de compressão.
+- Taxa de sucesso: proporção de respostas HTTP 2xx.
+- Número de chamadas REST necessárias por consulta.
+
+As requisições foram ordenadas em sequência aleatória para mitigar vieses de rede e cache.
+
+## Normalização e pré-processamento
+
+Após coletados, os dados foram organizados em um arquivo CSV único contendo:
+
+- api (rest ou graphql)
+- categoria (simples, media, complexa)
+- latência (time_ms)
+- tamanho da resposta (bytes)
+- repetição do experimento (run)
+- status da requisição (status)
+
+As etapas de pré-processamento incluíram:
+
+- Conversão de timestamps para milissegundos.
+- Padronização dos nomes de categorias e APIs para evitar inconsistências.
+- Remoção de entradas com falha (status ≠ 2xx).
+- Ordenação da categoria como variável categórica: simples → media → complexa.
+- Verificação de outliers extremos por erro de rede (nenhum precisou ser removido).
+
+Esses dados normalizados foram então usados para análise estatística e geração dos gráficos.
+
+## Métricas
+
+A seguir, as métricas utilizadas no laboratório, divididas em métricas principais do experimento e métricas complementares.
+
+Métricas do Experimento (Core Metrics — CM)
+| Código   | Métrica                                    | Descrição                                                                            |
+| -------- | ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| **CM01** | **Latência total (ms)**                  | Tempo entre envio e resposta final, medido no cliente.                               |
+| **CM02** | **Tamanho da resposta (bytes)**         | Tamanho do corpo JSON retornado pela API.                                            |
+| **CM03** | **Taxa de sucesso (%)**                 | Proporção de requisições HTTP 2xx por categoria e API.                               |
+| **CM04** | **Número de chamadas REST necessárias** | Total de requisições REST para retornar os mesmos dados que uma única query GraphQL. |
+| **CM05** | **Categoria da consulta**               | Classificação como simples, média ou complexa.                                       |
+
+
