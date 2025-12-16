@@ -207,8 +207,6 @@ As questões de pesquisa foram mapeadas diretamente às métricas do experimento
 
 ## Resultados
 
-Os gráficos apresentados (bar plots, violin plots, histograma etc.) ilustram claramente as diferenças entre REST e GraphQL.
-
 ### Distribuição por categoria
 
 As consultas foram realizadas de forma balanceada:
@@ -234,6 +232,20 @@ As consultas foram realizadas de forma balanceada:
 | ------- | ----- | ------- | ---------- | ---- | ------ |
 | GraphQL | 1564  | 179     | 2926       | 47   | 8920   |
 | REST    | 71967 | 5870    | 102508     | 1188 | 286239 |
+
+### Gráficos
+
+**Latência**
+
+<img src="code/output/graphs/cdf_latencia.png" alt="Gráfico cdf de latência entre respostas REST e GraphQL" width="450" height="250">
+
+<img src="code/output/graphs/facet_kde_categoria.png" alt="Gráfico de kde de latência por categoria entre respostas REST e GraphQL" width="450" height="250">
+
+**Tamanho (Em Bytes)**
+
+<img src="code/output/graphs/violino_bytes.png" alt="Gráfico violino de bytes entre respostas REST e GraphQL" width="450" height="250">
+
+<img src="code/output/graphs/facet_scatter_categoria.png" alt="Gráfico scatter bytes vs latência por categoria entre respostas REST e GraphQL" width="450" height="250">
 
 ### Discussão dos resultados
 
