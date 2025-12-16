@@ -268,14 +268,13 @@ IH2 - Tamanho da Resposta
 
 ## Conclusão
 
-O experimento demonstra de forma clara e estatisticamente sólida que:
+O experimento demonstra que:
 
 **Principais achados**
 
 - GraphQL apresenta latência menor que REST.
 - GraphQL retorna respostas muito menores em bytes.
 - A diferença aumenta conforme a complexidade da consulta cresce.
-- REST exige mais chamadas e possui maior overhead.
 
 **Dificuldades encontradas**
 
